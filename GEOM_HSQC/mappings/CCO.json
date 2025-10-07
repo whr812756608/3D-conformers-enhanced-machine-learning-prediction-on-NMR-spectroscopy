@@ -1,0 +1,28 @@
+{
+  "filename": "09890",
+  "geom_smiles": "CCO",
+  "status": "permuted",
+  "n_atoms": 9,
+  "rd_to_graph": [
+    0,
+    1,
+    2,
+    8,
+    6,
+    7,
+    3,
+    4,
+    5
+  ],
+  "graph_to_rd": [
+    0,
+    1,
+    2,
+    6,
+    7,
+    8,
+    4,
+    5,
+    3
+  ]
+}

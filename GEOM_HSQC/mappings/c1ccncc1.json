@@ -1,0 +1,32 @@
+{
+  "filename": "09912",
+  "geom_smiles": "c1ccncc1",
+  "status": "permuted",
+  "n_atoms": 11,
+  "rd_to_graph": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    10,
+    9,
+    8,
+    7,
+    6
+  ],
+  "graph_to_rd": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    10,
+    9,
+    8,
+    7,
+    6
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "filename": "33146",
+  "geom_smiles": "C1=CCOC1",
+  "status": "permuted",
+  "n_atoms": 11,
+  "rd_to_graph": [
+    0,
+    1,
+    2,
+    3,
+    9,
+    10,
+    4,
+    8,
+    7,
+    5,
+    6
+  ],
+  "graph_to_rd": [
+    0,
+    1,
+    2,
+    3,
+    6,
+    9,
+    10,
+    8,
+    7,
+    4,
+    5
+  ]
+}

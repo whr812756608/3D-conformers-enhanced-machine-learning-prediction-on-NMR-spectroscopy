@@ -1,0 +1,32 @@
+{
+  "filename": "09900",
+  "geom_smiles": "COC(C)=O",
+  "status": "permuted",
+  "n_atoms": 11,
+  "rd_to_graph": [
+    4,
+    8,
+    9,
+    10,
+    3,
+    1,
+    2,
+    0,
+    5,
+    6,
+    7
+  ],
+  "graph_to_rd": [
+    7,
+    5,
+    6,
+    4,
+    0,
+    8,
+    9,
+    10,
+    1,
+    2,
+    3
+  ]
+}
