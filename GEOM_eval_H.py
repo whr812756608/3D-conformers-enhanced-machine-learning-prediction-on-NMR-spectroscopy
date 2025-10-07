@@ -10,7 +10,7 @@ from pathlib import Path
 import pickle
 
 from data.GEOM_Single_graph_builder_enhanced import build_dataset, MatchedSplitConfig
-from Model_3D_NMR_hybrid import NMR2DMPNN, NMR3DNet, evaluate
+from Model_2D_3D_hybrid import NMR2DMPNN, NMR3DNet, evaluate
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -293,3 +293,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
