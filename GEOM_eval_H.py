@@ -214,7 +214,7 @@ def main():
     print("=" * 80)
 
     cfg = MatchedSplitConfig(
-        graph_npz_path="./data/data/dataset_graph_H_with_3d_matched.npz",
+        graph_npz_path="./data/npz_data/dataset_graph_H_with_3d_matched.npz",
         match_csv_path="./data/H_graph_geom_matches.csv",
         conformer_folder="./data/conformer_pickles_H_matched",
         task_name="H",
@@ -293,4 +293,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
