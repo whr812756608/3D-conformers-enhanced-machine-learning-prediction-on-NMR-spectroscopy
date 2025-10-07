@@ -21,7 +21,7 @@ from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 from rdkit import Chem
 
-from data_competition_1d_code_final_ver.Model_3D_NMR_hybrid import NMR3DNet, compute_node_angle_features
+from Model_2D_3D_hybrid import NMR3DNet, compute_node_angle_features
 torch.manual_seed(42)
 np.random.seed(42)
 
