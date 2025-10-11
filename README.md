@@ -56,13 +56,13 @@ The evaluatiion of the model is recorded in ```evaluation.ipynb```
 The expert validated test dataset can be downloaded from ```https://drive.google.com/drive/folders/1wQxk7mnIwi5aAGaF34_hk7xo6IeEh-IE?usp=drive_link```
 
 
-# 🧬 3D-Enhanced NMR Chemical Shift Prediction Pipeline
+#  3D-Enhanced NMR Chemical Shift Prediction Pipeline
 
 A complete machine learning pipeline for predicting ¹³C and ¹H NMR chemical shifts using 3D molecular geometry with self-supervised pretraining and transfer learning.
 
 ---
 
-## 📊 Pipeline Overview
+##  Pipeline Overview
 ```mermaid
 graph LR
     A[Unlabeled Conformers] -->|Self-Supervised| B[Pretraining]
@@ -86,7 +86,7 @@ graph LR
 
 ---
 
-## 🔄 Complete Workflow
+##  Complete Workflow
 
 ### **Stage 1: Self-Supervised Pretraining** 🎯
 
@@ -121,9 +121,9 @@ graph LR
 ```
 
 **What the Model Learns:**
-- 🎯 **Distance Prediction:** Spatial relationships between atoms
-- 🔧 **Coordinate Denoising:** Robust structural understanding
-- 🌐 **Universal Features:** Transferable to any NMR prediction task
+-  **Distance Prediction:** Spatial relationships between atoms
+-  **Coordinate Denoising:** Robust structural understanding
+-  **Universal Features:** Transferable to any NMR prediction task
 
 ---
 
@@ -215,7 +215,7 @@ graph LR
 
 ---
 
-## 🗂️ Repository Structure
+## Repository Structure
 ```
 your_repo/
 ├── 📁 GEOM_pretrain/              # Self-supervised pretraining
@@ -258,7 +258,7 @@ your_repo/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### **Option 1: Interactive Mode** (Recommended)
 ```bash
@@ -306,7 +306,7 @@ python GEOM_1H_NMR/1H_NMR_testing.py
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 All settings are centralized in config files. Edit these to customize your experiments:
 
@@ -338,7 +338,7 @@ SEEDS = [1, 24, 66]              # Different seeds than C
 
 ---
 
-## 🔬 Model Architecture
+## Model Architecture
 
 ### **NMR3DNet: Hybrid 2D/3D Architecture**
 ```
@@ -447,47 +447,47 @@ Loss = MSE(predicted_noise, actual_noise)
 
 ### **Key Insights:**
 
-✅ **3D geometry matters:** Consistent 10-15% improvement over 2D baseline
+ **3D geometry matters:** Consistent 10-15% improvement over 2D baseline
 
-✅ **Transfer learning works:** Pretrained models outperform random initialization by 8-10%
+ **Transfer learning works:** Pretrained models outperform random initialization by 8-10%
 
-✅ **Conformer ensembles help:** Boltzmann weighting adds another 5-8% improvement
+ **Conformer ensembles help:** Boltzmann weighting adds another 5-8% improvement
 
-✅ **Universal features:** Same pretrained model works for both ¹³C and ¹H!
+ **Universal features:** Same pretrained model works for both ¹³C and ¹H!
 
 ---
 
-## 🎯 Key Design Decisions
+## Key Design Decisions
 
 ### **Why Self-Supervised Pretraining?**
 
-❌ **Problem:** Labeled NMR data is expensive (requires experimental measurements)
+**Problem:** Labeled NMR data is expensive (requires experimental measurements)
 
-✅ **Solution:** Pretrain on cheap unlabeled conformers with geometric tasks
+**Solution:** Pretrain on cheap unlabeled conformers with geometric tasks
 
-📈 **Impact:** +15-25% performance improvement over from-scratch training
+**Impact:** +15-25% performance improvement over from-scratch training
 
 ### **Why Share Pretrained Model Across ¹³C and ¹H?**
 
-🔬 **Physical insight:** Both nuclei respond to similar geometric factors:
+**Physical insight:** Both nuclei respond to similar geometric factors:
 - Electronic shielding depends on 3D structure
 - Bond angles and distances influence both ¹³C and ¹H shifts
 - Neighboring atom effects are geometry-dependent
 
-🎯 **Practical benefit:** Train once, apply to multiple nuclei!
+**Practical benefit:** Train once, apply to multiple nuclei!
 
 ### **Why Multi-Conformer Ensembles?**
 
-🌊 **Reality:** Molecules exist as dynamic ensembles, not static structures
+**Reality:** Molecules exist as dynamic ensembles, not static structures
 
-⚖️ **Boltzmann weighting:** More stable conformers contribute more to NMR
+**Boltzmann weighting:** More stable conformers contribute more to NMR
 
-📊 **Results:** Consistent 5-8% improvement over single-conformer predictions
+**Results:** Consistent 5-8% improvement over single-conformer predictions
 
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 This work builds upon:
 - **SchNet:** Continuous-filter convolutional neural networks
@@ -497,7 +497,7 @@ This work builds upon:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
