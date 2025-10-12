@@ -19,15 +19,6 @@ conda activate nmr
 
 ### 2. Install dependencies
 ```
-pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-pip install torch-geometric==1.6.3 torch-sparse==0.6.9 torch-scatter==2.0.7 -f https://data.pytorch.org/whl/torch_stable.html
-pip install pytorch_lightning 
-pip install pandas 
-pip install matplotlib
-pip install numpy
-pip intall pickle5
-conda install -c conda-forge rdkit
-pip intall argparse
 datasets==4.2.0
 numpy==1.25.2
 pandas==2.3.3
