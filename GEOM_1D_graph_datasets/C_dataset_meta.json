@@ -1,0 +1,12 @@
+{
+  "task": "C",
+  "n_total": 2226,
+  "n_train": 1780,
+  "n_val": 222,
+  "n_test": 224,
+  "dataset_path": "/Users/hongruiwu/3D-conformers-enhanced-machine-learning-prediction-on-NMR-spectroscopy/GEOM_1D_graph_datasets/C_dataset_list.pt",
+  "split_path": "/Users/hongruiwu/3D-conformers-enhanced-machine-learning-prediction-on-NMR-spectroscopy/GEOM_1D_graph_datasets/C_split_indices.npz",
+  "seed_for_split": 2025,
+  "repo_root": "/Users/hongruiwu/3D-conformers-enhanced-machine-learning-prediction-on-NMR-spectroscopy",
+  "data_root": "/Users/hongruiwu/3D-conformers-enhanced-machine-learning-prediction-on-NMR-spectroscopy/data"
+}
