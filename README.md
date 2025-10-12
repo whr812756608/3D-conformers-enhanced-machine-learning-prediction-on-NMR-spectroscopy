@@ -195,21 +195,20 @@ graph LR
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                   OUTPUT: Metrics & Analysis                    │
-│                                                                  │
-│  📊 Global MAE (ppm)                                           │
-│  📊 Per-molecule MAE                                           │
-│  📊 Per-atom improvements (3D vs 2D)                           │
-│  📊 Statistical analysis across seeds                          │
-│                                                                  │
+│                                                                 │
+│  Global MAE (ppm)                                               │                                         
+│  Per-atom improvements (3D vs 2D)                               │
+│  Statistical analysis across seeds                              │
+│                                                                 │
 │  Example Results:                                               │
-│  ┌────────────────────┬──────────────┬──────────────┐         │
-│  │ Model              │ MAE (ppm)    │ Improvement  │         │
-│  ├────────────────────┼──────────────┼──────────────┤         │
-│  │ 2D Baseline        │ 2.50 ± 0.10  │ baseline     │         │
-│  │ 3D from Scratch    │ 2.20 ± 0.08  │ +12%         │         │
-│  │ 3D Pretrained      │ 2.00 ± 0.07  │ +20% ⭐      │         │
-│  │ 3D Ensemble        │ 1.80 ± 0.06  │ +28% ⭐⭐    │         │
-│  └────────────────────┴──────────────┴──────────────┘         │
+│  ┌────────────────────┬──────────────┬──────────────┐           │
+│  │ Model              │ MAE (ppm)    │ Improvement  │           │
+│  ├────────────────────┼──────────────┼──────────────┤           │
+│  │ 2D Baseline        │ 2.50 ± 0.10  │ baseline     │           │
+│  │ 3D from Scratch    │ 2.20 ± 0.08  │ +12%         │           │
+│  │ 3D Pretrained      │ 2.00 ± 0.07  │ +20%         │           │
+│  │ 3D Ensemble        │ 1.80 ± 0.06  │ +28%         │           │
+│  └────────────────────┴──────────────┴──────────────┘           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
