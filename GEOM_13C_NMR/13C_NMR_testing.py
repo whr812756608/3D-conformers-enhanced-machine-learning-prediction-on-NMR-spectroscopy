@@ -15,7 +15,7 @@ from urllib3.exceptions import NotOpenSSLWarning
 warnings.filterwarnings("ignore", category=NotOpenSSLWarning)
 
 # Import central configuration
-import config
+import C_NMR_config as config
 
 # ---------------- Project imports ----------------
 from GEOM_models.Model_2D_3D_hybrid import NMR2DMPNN, NMR3DNet, evaluate
@@ -94,39 +94,22 @@ def match_conformer_to_graph_coords(graph_smiles, conf_mol):
 
 
 @torch.no_grad()
-def evaluate_with_denorm(model, loader, device, use_normalization=False, label_mean=0.0, label_std=1.0):
-    """
-    Evaluate model with optional denormalization.
-    Returns predictions and true values in original (denormalized) scale.
-
-    NOTE: This assumes the test dataset is loaded RAW (not normalized).
-    Only predictions need denormalization.
-    """
+def evaluate_raw(model, loader, device):
+    """Evaluate model (raw ppm values)."""
     model.eval()
     pred, true = evaluate(model, loader, device)
-
-    # Only denormalize predictions (true labels are already raw from fresh dataset load)
-    if use_normalization:
-        pred = pred * label_std + label_mean
-        # DO NOT denormalize true - it's already in raw space!
-
     return pred, true
 
 
 @torch.no_grad()
-def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder, device,
-                                 top_n=30, use_normalization=False,
-                                 label_mean=0.0, label_std=1.0):
-    """
-    Multi-conformer ensemble evaluation with denormalization support.
-    """
+def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder, device, top_n=30):
+    """Multi-conformer ensemble evaluation (raw ppm values)."""
 
     def sanitize_filename(s):
         return s.replace('/', '_').replace('\\', '_').replace(':', '_')
 
     model_2d.eval()
     model_3d.eval()
-    conformer_folder = conformer_folder
 
     atom_rows, mol_rows = [], []
     all_true, all_p2d, all_p3s, all_p3e = [], [], [], []
@@ -181,13 +164,6 @@ def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder,
         pred_3d_single = conf_preds[0]
         true_vals = data.y[data.mask].cpu().numpy()
 
-        # Denormalize predictions and targets
-        if use_normalization:
-            pred_2d = pred_2d * label_std + label_mean
-            pred_3d_single = pred_3d_single * label_std + label_mean
-            pred_3d_ensemble = pred_3d_ensemble * label_std + label_mean
-            # true_vals = true_vals * label_std + label_mean
-
         n_masked = len(true_vals)
 
         all_true.append(true_vals)
@@ -204,7 +180,7 @@ def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder,
             "mae_3d_ensemble": float(np.mean(np.abs(true_vals - pred_3d_ensemble))),
         })
 
-        # annotate carbons
+        # Annotate atoms with metadata
         try:
             mol_rd = Chem.MolFromSmiles(smiles)
             mol_no_h, graph_order = canonical_nonH_order(mol_rd)
@@ -214,12 +190,20 @@ def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder,
         except Exception:
             use_meta = False
 
+        # Store ALL error metrics
         for a_idx in range(n_masked):
-            err2d = abs(true_vals[a_idx] - pred_2d[a_idx])
-            err3e = abs(true_vals[a_idx] - pred_3d_ensemble[a_idx])
-            gain = err2d - err3e
-            if gain <= 0:
-                continue
+            # Compute all error metrics
+            err_2d = abs(true_vals[a_idx] - pred_2d[a_idx])
+            err_3d_single = abs(true_vals[a_idx] - pred_3d_single[a_idx])
+            err_3d_ensemble = abs(true_vals[a_idx] - pred_3d_ensemble[a_idx])
+
+            # Absolute improvement (3D vs 2D)
+            abs_improvement = err_2d - err_3d_ensemble
+
+            # Relative improvement (percentage)
+            rel_improvement = ((err_2d - err_3d_ensemble) / err_2d * 100) if err_2d > 1e-6 else 0.0
+
+            # Get atom metadata
             atom_label = f"C[{a_idx}]"
             hybrid_str = "UNK"
             if use_meta:
@@ -233,8 +217,13 @@ def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder,
                 "hybrid": hybrid_str,
                 "true": float(true_vals[a_idx]),
                 "pred_2d": float(pred_2d[a_idx]),
+                "pred_3d_single": float(pred_3d_single[a_idx]),
                 "pred_3d_ensemble": float(pred_3d_ensemble[a_idx]),
-                "gain": float(gain),
+                "error_2d": float(err_2d),
+                "error_3d_single": float(err_3d_single),
+                "error_3d_ensemble": float(err_3d_ensemble),
+                "abs_improvement": float(abs_improvement),
+                "rel_improvement": float(rel_improvement),
             })
 
     if len(all_true) == 0:
@@ -249,51 +238,67 @@ def evaluate_ensemble_with_atoms(model_2d, model_3d, test_set, conformer_folder,
     mae_3s_global = mean_absolute_error(T, P3)
     mae_3e_global = mean_absolute_error(T, PE)
 
-    df_atoms = pd.DataFrame(atom_rows).sort_values("gain", ascending=False).reset_index(drop=True)
+    df_atoms = pd.DataFrame(atom_rows)
     df_mols = pd.DataFrame(mol_rows)
     return mae_2d_global, mae_3s_global, mae_3e_global, df_atoms, df_mols
 
 
-def print_atom_improvements(df_atoms, top_n=30):
-    if df_atoms.empty:
-        print("\n(No per-atom improvements recorded — check conformer files/matching.)")
-        return
-    print(f"\n{'=' * 100}")
-    print(f"TOP {top_n} IMPROVED ATOMS (3D Ensemble vs 2D) — CNMR")
-    print(f"{'=' * 100}")
-    print(f"{'Rank':<5} {'SMILES':<45} {'Atom[idx]':<12} {'Hybrid':<6} {'True':>8} {'2D':>8} {'3D Ens':>9} {'Gain':>9}")
-    print("-" * 100)
-    for rank, row in enumerate(df_atoms.head(top_n).itertuples(index=False), 1):
-        smiles_short = row.smiles[:42] + "..." if len(row.smiles) > 45 else row.smiles
-        print(f"{rank:<5} {smiles_short:<45} {row.atom:<12} {row.hybrid:<6} "
-              f"{row.true:>8.2f} {row.pred_2d:>8.2f} {row.pred_3d_ensemble:>9.2f} {row.gain:>+9.3f}")
+def print_top_improved_atoms(df_atoms, top_n=30):
+    """
+    Print top N atoms ranked by both:
+    1) Strong improvement vs 2D baseline
+    2) High accuracy (close to true value)
 
+    Composite score = improvement - penalty_for_error
+    """
+    if df_atoms.empty:
+        print("\n(No per-atom data recorded – check conformer files/matching.)")
+        return
+
+    # Compute composite score: balance improvement AND final accuracy
+    # Higher score = better (large improvement + low final error)
+    df_atoms = df_atoms.copy()
+    df_atoms['composite_score'] = df_atoms['abs_improvement'] - 0.85 * df_atoms['error_3d_ensemble']
+
+    # Sort by composite score (best first)
+    df_sorted = df_atoms.sort_values('composite_score', ascending=False)
+
+    # Print header
+    print(f"\n{'=' * 130}")
+    print(f"TOP {top_n} IMPROVED & ACCURATE ATOMS — ¹³C NMR")
+    print(f"{'=' * 130}")
+    print(f"Ranking criteria: (1) Strong improvement vs 2D, (2) High final accuracy")
+    print(f"{'=' * 130}")
+
+    print(f"{'Rank':<5} {'SMILES':<40} {'Atom':<10} {'Hyb':<5} "
+          f"{'True':>8} {'2D':>8} {'3D Ens':>8} {'Improv':>8} {'3D Err':>8}")
+    print("-" * 130)
+
+    for rank, row in enumerate(df_sorted.head(top_n).itertuples(index=False), 1):
+        smiles_short = row.smiles[:37] + "..." if len(row.smiles) > 40 else row.smiles
+
+        # Format improvement with sign
+        improvement = row.abs_improvement
+        improvement_str = f"{improvement:>+8.3f}"
+
+        print(f"{rank:<5} {smiles_short:<40} {row.atom:<10} {row.hybrid:<5} "
+              f"{row.true:>8.2f} {row.pred_2d:>8.2f} {row.pred_3d_ensemble:>8.2f} "
+              f"{improvement_str} {row.error_3d_ensemble:>8.3f}")
 
 def safe_load_weights(model, ckpt_path, device):
-    """
-    Load weights safely with normalization stats extraction.
-    Returns: (model, use_normalization, label_mean, label_std)
-    """
+    """Load weights safely."""
     state = torch.load(str(ckpt_path), map_location="cpu")
 
-    # Extract normalization stats if saved in new format
     if isinstance(state, dict) and 'model_state_dict' in state:
-        use_norm = state.get('use_normalization', False)
-        mean_val = state.get('label_mean', 0.0)
-        std_val = state.get('label_std', 1.0)
         model.load_state_dict(state['model_state_dict'], strict=False)
     else:
-        # Old format: just weights
-        use_norm = False
-        mean_val = 0.0
-        std_val = 1.0
         missing, unexpected = model.load_state_dict(state, strict=False)
         if missing or unexpected:
             print(f"  [warn] missing={len(missing)}, unexpected={len(unexpected)}")
 
     model.to(device)
     model.eval()
-    return model, use_norm, mean_val, std_val
+    return model
 
 
 def main():
@@ -304,7 +309,6 @@ def main():
     print(f"\n{'=' * 60}")
     print(f"TESTING CONFIGURATION")
     print(f"{'=' * 60}")
-    print(f"  Normalization: {'ENABLED' if config.USE_NORMALIZATION else 'DISABLED'}")
     print(f"  Pretrained models: {'ENABLED' if config.IF_PRETRAIN else 'DISABLED'}")
     print(f"  Seeds: {config.SEEDS}")
     print(f"{'=' * 60}\n")
@@ -345,15 +349,9 @@ def main():
     for SEED in config.SEEDS:
         print(f"\n{'=' * 80}\nSEED {SEED} — loading checkpoints and evaluating (CNMR)\n{'=' * 80}")
 
-        # Determine checkpoint names based on normalization
-        norm_suffix = "_normalized" if config.USE_NORMALIZATION else "_raw"
-        path_2d = config.DIR_MODELS / f"C_2D_baseline_seed{SEED}{norm_suffix}.pt"
-        path_3d = config.DIR_MODELS / f"C_3D_single_seed{SEED}{norm_suffix}.pt"
-        path_3d_pt = config.DIR_MODELS / f"C_3D_single_pretrained_seed{SEED}{norm_suffix}.pt"
-
-        # Store normalization stats (will be loaded from checkpoint)
-        norm_mean, norm_std = 0.0, 1.0
-        use_norm_flag = False
+        path_2d = config.DIR_MODELS / f"C_2D_baseline_seed{SEED}.pt"
+        path_3d = config.DIR_MODELS / f"C_3D_single_seed{SEED}.pt"
+        path_3d_pt = config.DIR_MODELS / f"C_3D_single_pretrained_seed{SEED}.pt"
 
         # Store per-seed results for table
         seed_results = {}
@@ -365,17 +363,9 @@ def main():
             m2d = None
         else:
             m2d = build_2d_on(torch.device("cpu"))
-            m2d, use_norm_flag, norm_mean, norm_std = safe_load_weights(m2d, path_2d, device)
+            m2d = safe_load_weights(m2d, path_2d, device)
 
-            if config.USE_NORMALIZATION and not use_norm_flag:
-                print(f"  Warning: Checkpoint was trained WITHOUT normalization, but USE_NORMALIZATION=True")
-
-            p2d, t2d = evaluate_with_denorm(
-                m2d, test_loader, device,
-                use_normalization=use_norm_flag,
-                label_mean=norm_mean,
-                label_std=norm_std
-            )
+            p2d, t2d = evaluate_raw(m2d, test_loader, device)
             mae_2d = mean_absolute_error(t2d, p2d)
             print(f"[Seed {SEED}] 2D Test MAE: {mae_2d:.4f} ppm")
             agg["2D"].append(mae_2d)
@@ -388,14 +378,9 @@ def main():
             m3d = None
         else:
             m3d = build_3d_on(torch.device("cpu"))
-            m3d, use_norm_flag, norm_mean, norm_std = safe_load_weights(m3d, path_3d, device)
+            m3d = safe_load_weights(m3d, path_3d, device)
 
-            p3d, t3d = evaluate_with_denorm(
-                m3d, test_loader, device,
-                use_normalization=use_norm_flag,
-                label_mean=norm_mean,
-                label_std=norm_std
-            )
+            p3d, t3d = evaluate_raw(m3d, test_loader, device)
             mae_3d_single = mean_absolute_error(t3d, p3d)
             print(f"[Seed {SEED}] 3D(single) Test MAE: {mae_3d_single:.4f} ppm")
             agg["3D_single"].append(mae_3d_single)
@@ -409,14 +394,9 @@ def main():
                 m3d_pt = None
             else:
                 m3d_pt = build_3d_on(torch.device("cpu"))
-                m3d_pt, use_norm_flag, norm_mean, norm_std = safe_load_weights(m3d_pt, path_3d_pt, device)
+                m3d_pt = safe_load_weights(m3d_pt, path_3d_pt, device)
 
-                p3d_pt, t3d_pt = evaluate_with_denorm(
-                    m3d_pt, test_loader, device,
-                    use_normalization=use_norm_flag,
-                    label_mean=norm_mean,
-                    label_std=norm_std
-                )
+                p3d_pt, t3d_pt = evaluate_raw(m3d_pt, test_loader, device)
                 mae_3d_pt_single = mean_absolute_error(t3d_pt, p3d_pt)
                 print(f"[Seed {SEED}] 3D(pretrained single) Test MAE: {mae_3d_pt_single:.4f} ppm")
                 agg["3D_pretrained_single"].append(mae_3d_pt_single)
@@ -425,13 +405,12 @@ def main():
             # 3D pretrained ensemble
             if (m2d is not None) and (m3d_pt is not None) and config.CONF_DIR.exists():
                 g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
-                    m2d, m3d_pt, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS,
-                    use_normalization=use_norm_flag, label_mean=norm_mean, label_std=norm_std
+                    m2d, m3d_pt, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
                 )
                 print(f"[Seed {SEED}] 3D Pretrained Ensemble (global atom-wise) MAE: {ge:.4f} ppm")
                 agg["3D_pretrained_ensemble"].append(ge)
                 seed_results["3D pretrained (ensemble)"] = ge
-                print_atom_improvements(df_atoms, top_n=config.TOP_N_ATOMS)
+                print_top_improved_atoms(df_atoms, top_n=config.TOP_N_ATOMS)
             else:
                 print("(Info) Pretrained ensemble skipped for this seed (missing models or conformers).")
 
@@ -439,13 +418,12 @@ def main():
         else:
             if (m2d is not None) and (m3d is not None) and config.CONF_DIR.exists():
                 g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
-                    m2d, m3d, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS,
-                    use_normalization=use_norm_flag, label_mean=norm_mean, label_std=norm_std
+                    m2d, m3d, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
                 )
                 print(f"[Seed {SEED}] 3D Ensemble (global atom-wise) MAE: {ge:.4f} ppm")
                 agg["3D_ensemble"].append(ge)
                 seed_results["3D ensemble"] = ge
-                print_atom_improvements(df_atoms, top_n=config.TOP_N_ATOMS)
+                print_top_improved_atoms(df_atoms, top_n=config.TOP_N_ATOMS)
             else:
                 print("(Info) Ensemble skipped for this seed (missing models or conformers).")
 
@@ -523,10 +501,7 @@ def main():
             print(f"{label:<35} {'(no runs)':>20} {'N/A':>18}")
 
     print(f"{'=' * 80}")
-    print(
-        f"Configuration: Normalization={'ON' if config.USE_NORMALIZATION else 'OFF'}, Pretrain={'ON' if config.IF_PRETRAIN else 'OFF'}")
-    if config.USE_NORMALIZATION and norm_mean != 0.0:
-        print(f"Denormalized with: mean={norm_mean:.4f}, std={norm_std:.4f}")
+    print(f"Configuration: Pretrain={'ON' if config.IF_PRETRAIN else 'OFF'}")
     print(f"{'=' * 80}")
 
 

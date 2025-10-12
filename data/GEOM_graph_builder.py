@@ -234,8 +234,8 @@ def build_dataset(cfg: MatchedSplitConfig):
         stats['success'] += 1
 
     # Save reports
-    df_failures = pd.DataFrame(failures)
-    df_failures.to_csv(f"{cfg.task_name}_NMR_failure_report.csv", index=False)
+    # df_failures = pd.DataFrame(failures)
+    # df_failures.to_csv(f"{cfg.task_name}_NMR_failure_report.csv", index=False)
 
     df_conformer_stats = pd.DataFrame(conformer_stats)
     df_conformer_stats.to_csv(f"{cfg.task_name}_NMR_conformer_stats.csv", index=False)

@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 import subprocess
-import config
+import C_NMR_config as config
 
 
 class PipelineRunner:
@@ -54,21 +54,30 @@ class PipelineRunner:
         print("EXPERIMENT CONFIGURATION")
         print("=" * 80)
         print(f"  Seeds: {config.SEEDS}")
-        print(f"  Normalization: {'ON' if config.USE_NORMALIZATION else 'OFF'}")
         print(f"  Pretrained Init: {'ON' if config.IF_PRETRAIN else 'OFF'}")
-        print(f"  Epochs: {config.EPOCHS}")
-        print(f"  Batch Size: {config.BATCH_SIZE}")
-        print(f"  Learning Rate: {config.LR}")
-        print(f"  Weight Decay: {config.WEIGHT_DECAY}")
-        print(f"  Early Patience: {config.EARLY_PATIENCE}")
-        print(f"  Top N Atoms: {config.TOP_N_ATOMS}")
+
+        if config.IF_PRETRAIN:
+            print(f"\n  Pretrained Model:")
+            print(f"    Path: {config.PRETRAINED_PATH}")
+            if config.PRETRAINED_PATH.exists():
+                print(f"    Status: ✓ Found")
+            else:
+                print(f"    Status: ✗ Not found (needs pretraining)")
+
+        print(f"\n  Training:")
+        print(f"    Epochs: {config.EPOCHS}")
+        print(f"    Batch Size: {config.BATCH_SIZE}")
+        print(f"    Learning Rate: {config.LR}")
+        print(f"    Weight Decay: {config.WEIGHT_DECAY}")
+        print(f"    Early Patience: {config.EARLY_PATIENCE}")
+        print(f"    Top N Atoms: {config.TOP_N_ATOMS}")
         print("=" * 80 + "\n")
 
     def run_pretrain(self):
         """Run pretraining stage."""
         stage_start = time.time()
         self.print_header("PRETRAINING")
-        pretrain_script = self.repo_root / "GEOM_pretrain" / "pretrain_3D.py"
+        pretrain_script = self.repo_root / "GEOM_pretrain" / "GEOM_3D_pretraining.py"
 
         if not pretrain_script.exists():
             print(f"Warning: Pretrain script not found at {pretrain_script}")
@@ -122,6 +131,21 @@ class PipelineRunner:
             print(f"Error: Training script not found at {train_script}")
             self.results['train'] = 'failed'
             return False
+
+        # Check if pretrained model exists when needed
+        if config.IF_PRETRAIN and not config.PRETRAINED_PATH.exists():
+            print(f"\n{'!' * 80}")
+            print(f"ERROR: Pretrained model not found!")
+            print(f"{'!' * 80}")
+            print(f"  Expected: {config.PRETRAINED_PATH}")
+            print(f"\nPlease run pretraining first:")
+            print(f"  python 13C_NMR_running_pipeline.py --pretrain")
+            print(f"{'!' * 80}\n")
+
+            response = input("Continue training from scratch? (y/N): ").strip().lower()
+            if response != 'y':
+                self.results['train'] = 'failed'
+                return False
 
         try:
             print(f"Running: python {train_script}")
@@ -211,7 +235,6 @@ class PipelineRunner:
 
         print(f"\nConfiguration Used:")
         print(f"  Seeds: {config.SEEDS}")
-        print(f"  Normalization: {'ON' if config.USE_NORMALIZATION else 'OFF'}")
         print(f"  Pretrained: {'ON' if config.IF_PRETRAIN else 'OFF'}")
         print(f"  Epochs: {config.EPOCHS}")
 
@@ -298,11 +321,17 @@ def interactive_mode():
     print("=" * 22 + "   INTERACTIVE MODE      " + "=" * 22)
     print("=" * 80)
 
-    print("\nCurrent configuration (edit config.py to change):")
+    print("\nCurrent configuration (edit C_NMR_config.py to change):")
     print(f"  Seeds: {config.SEEDS}")
-    print(f"  Normalization: {'ON' if config.USE_NORMALIZATION else 'OFF'}")
     print(f"  Pretrained Init: {'ON' if config.IF_PRETRAIN else 'OFF'}")
     print(f"  Epochs: {config.EPOCHS}")
+
+    if config.IF_PRETRAIN:
+        print(f"  Pretrained Model: {config.PRETRAINED_PATH.name}", end='')
+        if config.PRETRAINED_PATH.exists():
+            print(" (✓ exists)")
+        else:
+            print(" (✗ needs training)")
 
     print("\n" + "-" * 80)
     print("Select stages to run:")
@@ -369,8 +398,8 @@ Examples:
   python run_pipeline.py --pretrain         # Run pretraining only
   
 Configuration:
-  Edit config.py to change settings (seeds, normalization, epochs, etc.)
-  All scripts automatically use config.py settings.
+  Edit C_NMR_config.py to change settings (seeds, epochs, etc.)
+  All scripts automatically use C_NMR_config.py settings.
         """
     )
 

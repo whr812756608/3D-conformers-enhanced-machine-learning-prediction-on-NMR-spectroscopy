@@ -1,8 +1,7 @@
-# train_C_from_splits.py — L1 loss with optional normalization
 import os
 import numpy as np
 import torch
-import config
+import C_NMR_config as config
 from torch.utils.data import Dataset as TorchDataset, Subset
 from torch_geometric.loader import DataLoader
 from sklearn.metrics import mean_absolute_error
@@ -51,59 +50,9 @@ def maybe_load_pretrained(model, pretrained_path, device):
         print(f"Failed to load pretrained weights: {e}")
         return False
 
-
-def compute_normalization_stats(train_set, device):
-    """
-    Compute mean and std of labels from training set for normalization.
-    Returns (mean, std) as float values.
-    """
-    all_labels = []
-    for i in range(len(train_set)):
-        data = train_set[i]
-        if hasattr(data, 'y') and hasattr(data, 'mask'):
-            labels = data.y[data.mask].cpu().numpy()
-            all_labels.append(labels)
-
-    all_labels = np.concatenate(all_labels)
-    mean = float(np.mean(all_labels))
-    std = float(np.std(all_labels))
-
-    if std < 1e-6:  # Prevent division by zero
-        std = 1.0
-
-    print(f"\n{'=' * 60}")
-    print(f"TRAINING SET LABEL STATISTICS")
-    print(f"{'=' * 60}")
-    print(f"  Mean: {mean:.6f} ppm")
-    print(f"  Std:  {std:.6f} ppm")
-    print(f"  Min:  {np.min(all_labels):.6f} ppm")
-    print(f"  Max:  {np.max(all_labels):.6f} ppm")
-    print(f"  Total samples: {len(all_labels)}")
-    print(f"{'=' * 60}\n")
-
-    return mean, std
-
-
-def normalize_dataset(dataset, mean, std):
-    """
-    Normalize all labels in dataset using provided mean and std.
-    Modifies dataset in-place.
-    """
-    for i in range(len(dataset)):
-        data = dataset[i]
-        if hasattr(data, 'y'):
-            data.y = (data.y - mean) / std
-    return dataset
-
-
-def train_epoch(model, loader, optimizer, device, lambda_reg=0.02, max_grad_norm=5.0,
-                use_normalization=False, label_std=1.0):
+def train_epoch(model, loader, optimizer, device, lambda_reg=0.02, max_grad_norm=5.0):
     """
     Train for one epoch.
-
-    Args:
-        use_normalization: If True, loss is computed on normalized labels
-        label_std: Standard deviation of labels (for reporting denormalized loss)
     """
     model.train()
     total_loss = total_pred_loss = total_reg_loss = 0.0
@@ -136,32 +85,15 @@ def train_epoch(model, loader, optimizer, device, lambda_reg=0.02, max_grad_norm
     avg_pred_loss = total_pred_loss / n
     avg_reg = (total_reg_loss / n) if total_reg_loss > 0 else 0.0
 
-    if use_normalization:
-        avg_pred_loss_denorm = avg_pred_loss * label_std
-        return avg_loss, avg_pred_loss, avg_reg, avg_pred_loss_denorm
-    else:
-        return avg_loss, avg_pred_loss, avg_reg, None
+    return avg_loss, avg_pred_loss, avg_reg
 
 
 @torch.no_grad()
-def eval_mae(model, loader, device, use_normalization=False, label_mean=0.0, label_std=1.0):
-    """
-    Evaluate MAE with optional denormalization.
-
-    Args:
-        use_normalization: If True, denormalize predictions before computing MAE
-        label_mean, label_std: Normalization statistics for denormalization
-
-    Returns:
-        MAE in original (denormalized) scale
-    """
+def eval_mae(model, loader, device):
+    """Evaluate MAE (raw ppm values)."""
     was_training = model.training
     model.eval()
     pred, true = evaluate(model, loader, device)
-
-    if use_normalization:
-        pred = pred * label_std + label_mean
-        true = true * label_std + label_mean
 
     if was_training:
         model.train()
@@ -171,21 +103,8 @@ def eval_mae(model, loader, device, use_normalization=False, label_mean=0.0, lab
 
 def train_model(config_name, model, train_set, val_set, device,
                 epochs=100, bs=32, lr=5e-4, weight_decay=1e-6,
-                lambda_reg=0.02, early_stop_patience=20,
-                use_normalization=False, label_mean=0.0, label_std=1.0):
-    """
-    Train model with optional label normalization.
-
-    Args:
-        use_normalization: If True, assumes labels are already normalized
-        label_mean, label_std: Stats for denormalization during evaluation
-    """
+                lambda_reg=0.02, early_stop_patience=20):
     print(f"\n{'=' * 80}\nTraining: {config_name}\n{'=' * 80}")
-
-    if use_normalization:
-        print(f"Using NORMALIZED labels (mean={label_mean:.4f}, std={label_std:.4f})")
-    else:
-        print(f"Using RAW labels (no normalization)")
 
     # Simple loaders
     train_loader = DataLoader(train_set, batch_size=bs, shuffle=True, drop_last=True)
@@ -204,37 +123,24 @@ def train_model(config_name, model, train_set, val_set, device,
     save_path = os.path.join(config.DIR_MODELS, f"{config_name}.pt")
 
     for epoch in range(1, epochs + 1):
-        train_results = train_epoch(
-            model, train_loader, optimizer, device, lambda_reg=lambda_reg,
-            use_normalization=use_normalization, label_std=label_std
+        train_loss, pred_loss, reg_loss = train_epoch(
+            model, train_loader, optimizer, device, lambda_reg=lambda_reg
         )
-        train_loss, pred_loss, reg_loss = train_results[:3]
-        pred_loss_denorm = train_results[3] if len(train_results) > 3 else None
 
-        val_mae = eval_mae(model, val_loader, device,
-                           use_normalization=use_normalization,
-                           label_mean=label_mean, label_std=label_std)
+        val_mae = eval_mae(model, val_loader, device)
         scheduler.step(val_mae)
 
         if (epoch % 20) == 0:
-            if use_normalization:
-                loss_str = f"loss={train_loss:.4f} (norm={pred_loss:.4f}, ppm={pred_loss_denorm:.4f})"
-            else:
-                loss_str = f"loss={train_loss:.4f}"
-
             if reg_loss > 0:
-                print(f"  Epoch {epoch:3d}: {loss_str}, reg={reg_loss:.5f}, val={val_mae:.4f} ppm")
+                print(f"  Epoch {epoch:3d}: loss={train_loss:.4f}, reg={reg_loss:.5f}, val={val_mae:.4f} ppm")
             else:
-                print(f"  Epoch {epoch:3d}: {loss_str}, val={val_mae:.4f} ppm")
+                print(f"  Epoch {epoch:3d}: loss={train_loss:.4f}, val={val_mae:.4f} ppm")
 
         if val_mae < best_val_mae:
             best_val_mae = val_mae
 
             checkpoint = {
                 'model_state_dict': model.state_dict(),
-                'use_normalization': use_normalization,
-                'label_mean': label_mean,
-                'label_std': label_std,
                 'best_val_mae': best_val_mae,
                 'epoch': epoch
             }
@@ -279,17 +185,6 @@ def main():
     if config.PRINT_SPLIT_INFO:
         print(f"Split sizes: train={len(train_idx)}, val={len(val_idx)}, test={len(test_idx)}")
 
-    # Compute normalization statistics from training set
-    label_mean, label_std = 0.0, 1.0
-    if config.USE_NORMALIZATION:
-        temp_dataset = SimpleDataset(data_list)
-        temp_train_set = Subset(temp_dataset, train_idx)
-        label_mean, label_std = compute_normalization_stats(temp_train_set, device)
-
-        print(f"Applying normalization to dataset...")
-        normalize_dataset(data_list, label_mean, label_std)
-
-    # Create datasets AFTER normalization
     dataset = SimpleDataset(data_list)
     train_set = Subset(dataset, train_idx)
     val_set = Subset(dataset, val_idx)
@@ -302,24 +197,19 @@ def main():
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(SEED)
 
-        norm_suffix = "_normalized" if config.USE_NORMALIZATION else "_raw"
-
         # 2D baseline
         model_2d = build_2d().to(device)
         train_model(
-            f"C_2D_baseline_seed{SEED}{norm_suffix}", model_2d, train_set, val_set, device,
+            f"C_2D_baseline_seed{SEED}", model_2d, train_set, val_set, device,
             epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR, weight_decay=config.WEIGHT_DECAY,
-            lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE,
-            use_normalization=config.USE_NORMALIZATION, label_mean=label_mean, label_std=label_std
-        )
+            lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE)
 
         # 3D single conformer (from scratch)
         model_3d = build_3d().to(device)
         train_model(
-            f"C_3D_single_seed{SEED}{norm_suffix}", model_3d, train_set, val_set, device,
+            f"C_3D_single_seed{SEED}", model_3d, train_set, val_set, device,
             epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR, weight_decay=config.WEIGHT_DECAY,
             lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE,
-            use_normalization=config.USE_NORMALIZATION, label_mean=label_mean, label_std=label_std
         )
 
         # 3D single conformer (pretrained init)
@@ -329,18 +219,14 @@ def main():
             if not ok:
                 print("Proceeding without pretrained (weights not loaded).")
             train_model(
-                f"C_3D_single_pretrained_seed{SEED}{norm_suffix}", model_3d_pt,
+                f"C_3D_single_pretrained_seed{SEED}", model_3d_pt,
                 train_set, val_set, device,
                 epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR, weight_decay=config.WEIGHT_DECAY,
                 lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE,
-                use_normalization=config.USE_NORMALIZATION, label_mean=label_mean, label_std=label_std
             )
 
     print("\n" + "=" * 80)
     print("All training runs complete!")
-    print(f"Normalization mode: {'NORMALIZED' if config.USE_NORMALIZATION else 'RAW'}")
-    if config.USE_NORMALIZATION:
-        print(f"Normalization stats: mean={label_mean:.4f}, std={label_std:.4f}")
     print(f"Checkpoints saved in: {config.DIR_MODELS}")
     print("=" * 80)
 
