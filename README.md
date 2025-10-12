@@ -28,6 +28,20 @@ pip install numpy
 pip intall pickle5
 conda install -c conda-forge rdkit
 pip intall argparse
+datasets==4.2.0
+numpy==1.25.2
+pandas==2.3.3
+rdkit==2024.9.6
+schnetpack==2.1.1
+scikit_learn==1.1.2
+scipy==1.16.2
+sympy==1.9
+torch==2.2.2
+torch_cluster==1.6.3
+torch_geometric==2.6.1
+torch_scatter==2.1.2
+tqdm==4.64.1
+urllib3==1.26.11
 ```
 ## Usage
 ### Training the Model
@@ -97,7 +111,7 @@ graph LR
 │   conformer_pickles_pretrain/                                   │
 │   ├── molecule1.pickle  (3D geometry only)                      │
 │   ├── molecule2.pickle  (no NMR labels!)                        │
-│   └── ...                                                        │
+│   └── ...                                                       │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
                     ┌─────────────────────┐
@@ -112,11 +126,11 @@ graph LR
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                OUTPUT: Pretrained 3D Encoder                    │
-│   GEOM_pretrain/pretrained_models/3D_pretrained.pt             │
-│                                                                  │
-│   ✓ Learns geometric relationships                             │
-│   ✓ No NMR labels needed                                       │
-│   ✓ SHARED by both ¹³C and ¹H NMR                            │
+│   GEOM_pretrain/pretrained_models/3D_pretrained.pt              │
+│                                                                 │
+│   ✓ Learns geometric relationships                              │
+│   ✓ No NMR labels needed                                        │
+│   ✓ SHARED by both ¹³C and ¹H NMR                               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -134,9 +148,9 @@ graph LR
 ┌─────────────────────────────────────────────────────────────────┐
 │              INPUT: Labeled NMR Dataset                         │
 │   GEOM_1D_graph_datasets/                                       │
-│   ├── C_dataset_list.pt   (¹³C shifts + 3D coords)            │
-│   ├── H_dataset_list.pt   (¹H shifts + 3D coords)             │
-│   └── *_split_indices.npz (train/val/test splits)             │
+│   ├── C_dataset_list.pt   (¹³C shifts + 3D coords)              │
+│   ├── H_dataset_list.pt   (¹H shifts + 3D coords)               │
+│   └── *_split_indices.npz (train/val/test splits)               │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
           ┌───────────────────────────────────────┐
@@ -146,22 +160,22 @@ graph LR
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                   TRAIN 3 MODEL VARIANTS                        │
-│                                                                  │
-│  1️⃣  2D Baseline    → Graph topology only                     │
-│  2️⃣  3D from Scratch → Random 3D initialization               │
-│  3️⃣  3D Pretrained  → Transfer learning (best!)               │
-│                                                                  │
-│  Each trained with 3 random seeds → 9 models total            │
+│                                                                 │
+│  1️⃣  2D Baseline    → Graph topology only                       │
+│  2️⃣  3D from Scratch → Random 3D initialization                 │
+│  3️⃣  3D Pretrained  → Transfer learning (best!)                 │
+│                                                                 │
+│  Each trained with 3 random seeds → 9 models total              │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                OUTPUT: Fine-tuned Models                        │
 │   GEOM_models/                                                  │
-│   ├── C_2D_baseline_seed0.pt                                   │
-│   ├── C_3D_single_seed0.pt                                     │
-│   ├── C_3D_single_pretrained_seed0.pt                          │
-│   ├── ... (repeat for seeds 42, 66)                           │
-│   └── H_*.pt (same structure for ¹H)                          │
+│   ├── C_2D_baseline_seed0.pt                                    │
+│   ├── C_3D_single_seed0.pt                                      │
+│   ├── C_3D_single_pretrained_seed0.pt                           │
+│   ├── ... (repeat for seeds 42, 66)                             │
+│   └── H_*.pt (same structure for ¹H)                            │  
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -179,10 +193,10 @@ graph LR
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                   INPUT: Test Data                              │
-│   1. Held-out test set (unseen during training)                │
+│   1. Held-out test set (unseen during training)                 │
 │   2. Multiple conformers per molecule:                          │
 │      conformer_pickles_*_matched/                               │
-│      └── SMILES_hash.pickle (5-20 conformers each)            │
+│      └── SMILES_hash.pickle (5-20 conformers each)              │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
           ┌───────────────────────────────────────┐
