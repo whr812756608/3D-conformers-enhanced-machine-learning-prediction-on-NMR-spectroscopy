@@ -20,18 +20,19 @@ This project builds upon our TransPeakNet baseline model: **TransPeakNet**, a st
 - Multi-task learning across three NMR modalities
 - Self-training with pseudo-labels for 2D NMR
 
-**This Project's Extension:** We enhance TransPeakNet by:
-1. Adding 3D conformer information from GEOM
-2. Implementing self-supervised pretraining on unlabeled structures
-3. Using Boltzmann-weighted conformer ensembles
 
 For TransPeakNet-only experiments, see the [original repository](https://github.com/siriusxiao62/2dNMR).
 
-**GEOM Dataset:** GEOM conformers available at https://doi.org/10.7910/DVN/JNGTDF
+![Dataset Overview](figures/figure1.png)
 
 ---
 
-##  Why 3D Conformers Matter
+##  This Project's Extension: Why 3D Conformers Matter
+
+** We enhance TransPeakNet by:
+1. Adding 3D conformer information from GEOM
+2. Implementing self-supervised pretraining on unlabeled structures
+3. Using Boltzmann-weighted conformer ensembles
 
 | Aspect | 2D-Only Models | **Our 3D-Enhanced Approach** |
 |--------|----------------|------------------------------|
