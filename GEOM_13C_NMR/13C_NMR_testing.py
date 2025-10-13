@@ -258,21 +258,22 @@ def print_top_improved_atoms(df_atoms, top_n=30):
     # Compute composite score: balance improvement AND final accuracy
     # Higher score = better (large improvement + low final error)
     df_atoms = df_atoms.copy()
-    df_atoms['composite_score'] = df_atoms['abs_improvement'] - 0.85 * df_atoms['error_3d_ensemble']
+    df_atoms['composite_score'] = df_atoms['abs_improvement'] - 0.5 * df_atoms['error_3d_ensemble']
 
     # Sort by composite score (best first)
     df_sorted = df_atoms.sort_values('composite_score', ascending=False)
 
     # Print header
-    print(f"\n{'=' * 130}")
+    print(f"\n{'=' * 135}")
     print(f"TOP {top_n} IMPROVED & ACCURATE ATOMS — ¹³C NMR")
-    print(f"{'=' * 130}")
+    print(f"{'=' * 135}")
     print(f"Ranking criteria: (1) Strong improvement vs 2D, (2) High final accuracy")
-    print(f"{'=' * 130}")
+    print(f"{'=' * 135}")
 
+    # Column headers with explicit "3D Ens" label
     print(f"{'Rank':<5} {'SMILES':<40} {'Atom':<10} {'Hyb':<5} "
-          f"{'True':>8} {'2D':>8} {'3D Ens':>8} {'Improv':>8} {'3D Err':>8}")
-    print("-" * 130)
+          f"{'True':>8} {'2D Pred':>8} {'3D Ens':>8} {'Improv':>8} {'3D Err':>8}")
+    print("-" * 135)
 
     for rank, row in enumerate(df_sorted.head(top_n).itertuples(index=False), 1):
         smiles_short = row.smiles[:37] + "..." if len(row.smiles) > 40 else row.smiles
@@ -285,9 +286,28 @@ def print_top_improved_atoms(df_atoms, top_n=30):
               f"{row.true:>8.2f} {row.pred_2d:>8.2f} {row.pred_3d_ensemble:>8.2f} "
               f"{improvement_str} {row.error_3d_ensemble:>8.3f}")
 
+    # Summary statistics
+    print("=" * 135)
+    print(f"Summary of top {top_n} atoms:")
+    top_subset = df_sorted.head(top_n)
+    print(f"  Mean improvement:     {top_subset['abs_improvement'].mean():>+7.3f} ppm")
+    print(f"  Mean 3D error:        {top_subset['error_3d_ensemble'].mean():>7.3f} ppm")
+    print(f"  Mean 2D error:        {top_subset['error_2d'].mean():>7.3f} ppm")
+    print(f"  Best improvement:     {top_subset['abs_improvement'].max():>+7.3f} ppm")
+    print(f"  Best 3D accuracy:     {top_subset['error_3d_ensemble'].min():>7.3f} ppm")
+
+    print(f"\nOverall dataset ({len(df_atoms)} atoms):")
+    print(f"  Mean 3D error:        {df_atoms['error_3d_ensemble'].mean():>7.3f} ppm")
+    print(f"  Median 3D error:      {df_atoms['error_3d_ensemble'].median():>7.3f} ppm")
+    print(f"  Mean improvement:     {df_atoms['abs_improvement'].mean():>+7.3f} ppm")
+    print(f"  Atoms improved:       {(df_atoms['abs_improvement'] > 0).sum()} / {len(df_atoms)} "
+          f"({(df_atoms['abs_improvement'] > 0).sum() / len(df_atoms) * 100:.1f}%)")
+    print("=" * 135)
+
+
 def safe_load_weights(model, ckpt_path, device):
     """Load weights safely."""
-    state = torch.load(str(ckpt_path), map_location="cpu")
+    state = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
 
     if isinstance(state, dict) and 'model_state_dict' in state:
         model.load_state_dict(state['model_state_dict'], strict=False)
@@ -309,7 +329,10 @@ def main():
     print(f"\n{'=' * 60}")
     print(f"TESTING CONFIGURATION")
     print(f"{'=' * 60}")
-    print(f"  Pretrained models: {'ENABLED' if config.IF_PRETRAIN else 'DISABLED'}")
+    if config.IF_PRETRAIN:
+        print(f"  Mode: Testing pretrained 3D models")
+    else:
+        print(f"  Mode: Testing from-scratch 3D models")
     print(f"  Seeds: {config.SEEDS}")
     print(f"{'=' * 60}\n")
 
@@ -331,27 +354,19 @@ def main():
     test_loader = DataLoader(test_set, batch_size=config.BATCH_SIZE, shuffle=False)
     print(f"Test size: {len(test_set)}")
 
-    # Aggregation structure depends on IF_PRETRAIN
-    if config.IF_PRETRAIN:
-        agg = {
-            "2D": [],
-            "3D_single": [],
-            "3D_pretrained_single": [],
-            "3D_pretrained_ensemble": []
-        }
-    else:
-        agg = {
-            "2D": [],
-            "3D_single": [],
-            "3D_ensemble": []
-        }
+    # Simplified aggregation structure - same for both modes
+    agg = {
+        "2D": [],
+        "3D_single": [],
+        "3D_ensemble": []
+    }
 
     for SEED in config.SEEDS:
-        print(f"\n{'=' * 80}\nSEED {SEED} — loading checkpoints and evaluating (CNMR)\n{'=' * 80}")
+        print(f"\n{'=' * 80}\nSEED {SEED} — loading checkpoints and evaluating (¹³C NMR)\n{'=' * 80}")
 
+        # Simplified paths - only two models now
         path_2d = config.DIR_MODELS / f"C_2D_baseline_seed{SEED}.pt"
         path_3d = config.DIR_MODELS / f"C_3D_single_seed{SEED}.pt"
-        path_3d_pt = config.DIR_MODELS / f"C_3D_single_pretrained_seed{SEED}.pt"
 
         # Store per-seed results for table
         seed_results = {}
@@ -367,13 +382,13 @@ def main():
 
             p2d, t2d = evaluate_raw(m2d, test_loader, device)
             mae_2d = mean_absolute_error(t2d, p2d)
-            print(f"[Seed {SEED}] 2D Test MAE: {mae_2d:.4f} ppm")
+            print(f"[Seed {SEED}] 2D baseline MAE: {mae_2d:.4f} ppm")
             agg["2D"].append(mae_2d)
             seed_results["2D baseline"] = mae_2d
 
-        # ========== 3D SINGLE (from scratch) ==========
+        # ========== 3D SINGLE ==========
         if not path_3d.exists():
-            print(f"Warning: Missing 3D(single) checkpoint: {path_3d}")
+            print(f"Warning: Missing 3D checkpoint: {path_3d}")
             mae_3d_single = np.nan
             m3d = None
         else:
@@ -382,50 +397,21 @@ def main():
 
             p3d, t3d = evaluate_raw(m3d, test_loader, device)
             mae_3d_single = mean_absolute_error(t3d, p3d)
-            print(f"[Seed {SEED}] 3D(single) Test MAE: {mae_3d_single:.4f} ppm")
+            print(f"[Seed {SEED}] 3D single MAE: {mae_3d_single:.4f} ppm")
             agg["3D_single"].append(mae_3d_single)
             seed_results["3D single"] = mae_3d_single
 
-        # ========== PRETRAINED PATH ==========
-        if config.IF_PRETRAIN:
-            if not path_3d_pt.exists():
-                print(f"Warning: Missing 3D(pretrained) checkpoint: {path_3d_pt}")
-                mae_3d_pt_single = np.nan
-                m3d_pt = None
-            else:
-                m3d_pt = build_3d_on(torch.device("cpu"))
-                m3d_pt = safe_load_weights(m3d_pt, path_3d_pt, device)
-
-                p3d_pt, t3d_pt = evaluate_raw(m3d_pt, test_loader, device)
-                mae_3d_pt_single = mean_absolute_error(t3d_pt, p3d_pt)
-                print(f"[Seed {SEED}] 3D(pretrained single) Test MAE: {mae_3d_pt_single:.4f} ppm")
-                agg["3D_pretrained_single"].append(mae_3d_pt_single)
-                seed_results["3D pretrained (single)"] = mae_3d_pt_single
-
-            # 3D pretrained ensemble
-            if (m2d is not None) and (m3d_pt is not None) and config.CONF_DIR.exists():
-                g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
-                    m2d, m3d_pt, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
-                )
-                print(f"[Seed {SEED}] 3D Pretrained Ensemble (global atom-wise) MAE: {ge:.4f} ppm")
-                agg["3D_pretrained_ensemble"].append(ge)
-                seed_results["3D pretrained (ensemble)"] = ge
-                print_top_improved_atoms(df_atoms, top_n=config.TOP_N_ATOMS)
-            else:
-                print("(Info) Pretrained ensemble skipped for this seed (missing models or conformers).")
-
-        # ========== NON-PRETRAINED ENSEMBLE PATH ==========
+        # ========== 3D ENSEMBLE ==========
+        if (m2d is not None) and (m3d is not None) and config.CONF_DIR.exists():
+            g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
+                m2d, m3d, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
+            )
+            print(f"[Seed {SEED}] 3D ensemble MAE: {ge:.4f} ppm")
+            agg["3D_ensemble"].append(ge)
+            seed_results["3D ensemble"] = ge
+            print_top_improved_atoms(df_atoms, top_n=config.TOP_N_ATOMS)
         else:
-            if (m2d is not None) and (m3d is not None) and config.CONF_DIR.exists():
-                g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
-                    m2d, m3d, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
-                )
-                print(f"[Seed {SEED}] 3D Ensemble (global atom-wise) MAE: {ge:.4f} ppm")
-                agg["3D_ensemble"].append(ge)
-                seed_results["3D ensemble"] = ge
-                print_top_improved_atoms(df_atoms, top_n=config.TOP_N_ATOMS)
-            else:
-                print("(Info) Ensemble skipped for this seed (missing models or conformers).")
+            print("(Info) Ensemble skipped for this seed (missing models or conformers).")
 
         # ========== PER-SEED SUMMARY TABLE ==========
         print(f"\n{'=' * 80}")
@@ -459,25 +445,18 @@ def main():
         return float(arr.mean()), float(arr.std(ddof=0)), len(arr)
 
     print(f"\n{'=' * 80}")
-    print(f"ACROSS-SEEDS SUMMARY (CNMR) - Average over {len(config.SEEDS)} seeds")
+    print(f"ACROSS-SEEDS SUMMARY (¹³C NMR) - Average over {len(config.SEEDS)} seeds")
     print(f"{'=' * 80}")
 
     # Compute baseline average for improvement calculation
     baseline_mean, _, baseline_n = m_s(agg["2D"])
 
-    if config.IF_PRETRAIN:
-        comparisons = [
-            ("2D", "2D baseline"),
-            ("3D_single", "3D single (from scratch)"),
-            ("3D_pretrained_single", "3D pretrained (single)"),
-            ("3D_pretrained_ensemble", "3D pretrained (ensemble)")
-        ]
-    else:
-        comparisons = [
-            ("2D", "2D baseline"),
-            ("3D_single", "3D single"),
-            ("3D_ensemble", "3D ensemble")
-        ]
+    # Simplified comparisons - same for both modes
+    comparisons = [
+        ("2D", "2D baseline"),
+        ("3D_single", "3D single"),
+        ("3D_ensemble", "3D ensemble")
+    ]
 
     print(f"{'Model':<35} {'MAE (ppm)':>20} {'vs 2D baseline':>18}")
     print("-" * 80)
@@ -501,7 +480,10 @@ def main():
             print(f"{label:<35} {'(no runs)':>20} {'N/A':>18}")
 
     print(f"{'=' * 80}")
-    print(f"Configuration: Pretrain={'ON' if config.IF_PRETRAIN else 'OFF'}")
+    if config.IF_PRETRAIN:
+        print(f"Configuration: 3D models trained with pretrained initialization")
+    else:
+        print(f"Configuration: 3D models trained from scratch")
     print(f"{'=' * 80}")
 
 
