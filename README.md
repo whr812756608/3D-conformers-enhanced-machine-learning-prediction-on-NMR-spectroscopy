@@ -152,29 +152,22 @@ graph LR
 ┌─────────────────────────────────────────────────────────────────┐
 │                   TRAIN 3 MODEL VARIANTS                        │
 │                                                                 │
-│  1️⃣  2D Baseline    → Graph topology only                       │
-│  2️⃣  3D from Scratch → Random 3D initialization                 │
-│  3️⃣  3D Pretrained  → Transfer learning (best!)                 │
+│  1  2D Baseline    → Graph topology only                        │
+│  2  3D Pretrained  → Transfer learning                          │
 │                                                                 │
-│  Each trained with 3 random seeds → 9 models total              │
+│  Each trained with 5 random seeds → 10 models total              │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                OUTPUT: Fine-tuned Models                        │
 │   GEOM_models/                                                  │
-│   ├── C_2D_baseline_seed0.pt                                    │
-│   ├── C_3D_single_seed0.pt                                      │
-│   ├── C_3D_single_pretrained_seed0.pt                           │
-│   ├── ... (repeat for seeds 42, 66)                             │
+│   ├── C_2D_baseline_seed10.pt                                   │
+│   ├── C_3D_single_seed10.pt                                     │
+│   ├── ... (repeat for seeds 20, 30...)                          │
 │   └── H_*.pt (same structure for ¹H)                            │  
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Training Details:**
-- ✅ Normalized labels (mean=0, std=1)
-- ✅ L1 loss (MAE objective)
-- ✅ Early stopping (patience=20)
-- ✅ ReduceLROnPlateau scheduler
 
 ---
 
@@ -187,7 +180,7 @@ graph LR
 │   1. Held-out test set (unseen during training)                 │
 │   2. Multiple conformers per molecule:                          │
 │      conformer_pickles_*_matched/                               │
-│      └── SMILES_hash.pickle (5-20 conformers each)              │
+│      └── SMILES_hash.pickle (1-100 conformers)                  │    
 └─────────────────────────────────────────────────────────────────┘
                               ↓
           ┌───────────────────────────────────────┐
@@ -210,8 +203,7 @@ graph LR
 │  │ Model              │ MAE (ppm)    │ Improvement  │           │
 │  ├────────────────────┼──────────────┼──────────────┤           │
 │  │ 2D Baseline        │ 2.50 ± 0.10  │ baseline     │           │
-│  │ 3D from Scratch    │ 2.20 ± 0.08  │ +12%         │           │
-│  │ 3D Pretrained      │ 2.00 ± 0.07  │ +20%         │           │
+│  │ 3D Single          │ 2.20 ± 0.08  │ +12%         │           │
 │  │ 3D Ensemble        │ 1.80 ± 0.06  │ +28%         │           │
 │  └────────────────────┴──────────────┴──────────────┘           │
 └─────────────────────────────────────────────────────────────────┘
@@ -226,7 +218,7 @@ your_repo/
 │   ├── GEOM_3D_pretraining.py    # Pretraining script
 │   ├── conformer_pickles_pretrain/ # Unlabeled conformers (input)
 │   └── pretrained_models/
-│       └── 3D_pretrained.pt      # Pretrained weights (SHARED!)
+│       └── 3D_pretrained.pt      # Pretrained weights (SHARED between 1H and 13C NMR)
 │
 ├── 📁 GEOM_1D_graph_datasets/    # Labeled datasets
 │   ├── C_dataset_list.pt         # ¹³C NMR data
@@ -240,11 +232,11 @@ your_repo/
 │
 ├── 📁 GEOM_models/                # Trained models (output)
 │   ├── C_2D_baseline_seed*.pt
-│   ├── C_3D_single_pretrained_seed*.pt
+│   ├── C_3D_single_seed*.pt
 │   ├── H_2D_baseline_seed*.pt
-│   └── H_3D_single_pretrained_seed*.pt
+│   └── H_3D_single_seed*.pt
 │
-├── 📁 GEOM_13C_NMR/              # ¹³C pipeline
+├── 📁 GEOM_13C_NMR/              # 13C pipeline
 │   ├── C_NMR_config.py           # Central configuration
 │   ├── 13C_NMR_training.py       # Training script
 │   ├── 13C_NMR_testing.py        # Testing script
@@ -317,8 +309,7 @@ All settings are centralized in config files. Edit these to customize your exper
 ### **C_NMR_config.py**
 ```python
 # Experiment settings
-SEEDS = [0, 42, 66]              # Random seeds for reproducibility
-USE_NORMALIZATION = True         # Normalize labels (recommended)
+SEEDS = [10, 20, 30, 40, 50]      # Random seeds for reproducibility
 IF_PRETRAIN = True               # Use pretrained initialization
 
 # Training hyperparameters
@@ -336,7 +327,7 @@ SSL_NOISE_LEVEL = 0.10           # Noise level (Angstroms)
 ### **H_NMR_config.py**
 ```python
 # Same structure, but with H-specific settings
-SEEDS = [1, 24, 66]              # Different seeds than C
+SEEDS = [10, 20, 30, 40, 50]              
 # ... (all other settings identical)
 ```
 
@@ -392,7 +383,7 @@ SEEDS = [1, 24, 66]              # Different seeds than C
 
 ---
 
-## 📊 Self-Supervised Pretraining Tasks
+## Self-Supervised Pretraining Tasks
 
 ### **Task 1: Distance Prediction** 🎯
 
