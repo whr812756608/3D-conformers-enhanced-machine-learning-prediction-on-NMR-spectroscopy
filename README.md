@@ -8,9 +8,24 @@ This project investigates whether incorporating **3D conformational information*
 
 ### Previous work
 
-**Published Work:** This project builds upon our TransPeakNet baseline model:
+This project builds upon our TransPeakNet baseline model: **TransPeakNet**, a state-of-the-art model for solvent-aware NMR prediction:
+
+**Published paper:
 > [TransPeakNet: Solvent-Aware 2D NMR Prediction via Multi-Task Pre-Training and Unsupervised Learning](https://doi.org/10.1038/s42004-025-01455-9)  
 > *Nature Communications Chemistry* (2025)
+**Code & Data:** [github.com/siriusxiao62/2dNMR](https://github.com/siriusxiao62/2dNMR)
+
+**TransPeakNet Highlights:**
+- 33,000 molecules with ¹³C, ¹H, and 2D HSQC measurements
+- Multi-task learning across three NMR modalities
+- Self-training with pseudo-labels for 2D NMR
+
+**This Project's Extension:** We enhance TransPeakNet by:
+1. Adding 3D conformer information from GEOM
+2. Implementing self-supervised pretraining on unlabeled structures
+3. Using Boltzmann-weighted conformer ensembles
+
+For TransPeakNet-only experiments, see the [original repository](https://github.com/siriusxiao62/2dNMR).
 
 **GEOM Dataset:** GEOM conformers available at https://doi.org/10.7910/DVN/JNGTDF
 
@@ -387,16 +402,15 @@ Loss = MSE(predicted_noise, actual_noise)
 
 ---
 
-## 📈 Expected Results
+## Results and discussion
 
 ### **¹³C NMR Chemical Shifts**
 
 | Model | MAE (ppm) | Improvement vs 2D | Notes |
 |-------|-----------|-------------------|-------|
-| 2D Baseline | 2.5 ± 0.1 | — | Graph topology only |
-| 3D from Scratch | 2.2 ± 0.1 | +12% | Random 3D init |
-| **3D Pretrained** | **2.0 ± 0.1** | **+20%** ⭐ | Transfer learning |
-| **3D Ensemble** | **1.8 ± 0.1** | **+28%** ⭐⭐ | Multi-conformer |
+| 2D Baseline | 2.8 ± 0.1 | — | Graph topology only |
+| **3D Pretrained** | **2.5 ± 0.1** | **+5%** ⭐ | Transfer learning |
+| **3D Ensemble** | **2.0 ± 0.1** | **+28%** ⭐⭐ | Multi-conformer |
 
 ### **¹H NMR Chemical Shifts**
 
@@ -446,6 +460,8 @@ Loss = MSE(predicted_noise, actual_noise)
 
 **Results:** Consistent 5-8% improvement over single-conformer predictions
 
+
+---
 
 ---
 
