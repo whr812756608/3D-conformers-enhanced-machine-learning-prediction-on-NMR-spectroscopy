@@ -409,9 +409,9 @@ Loss = MSE(predicted_noise, actual_noise)
 
 | Model | MAE (ppm) | Improvement vs 2D | Notes |
 |-------|-----------|-------------------|-------|
-| 2D Baseline | 2.8 ± 0.1 | — | Graph topology only |
-| **3D Pretrained** | **2.5 ± 0.1** | **+5%** ⭐ | Transfer learning |
-| **3D Ensemble** | **2.0 ± 0.1** | **+28%** ⭐⭐ | Multi-conformer |
+| 2D Baseline | 2.8292 ± 0.1168 | — | Graph topology only |
+| **3D Pretrained** | **2.6033 ± 0.1207** | **+8%** ⭐ | Single Conformer |
+| **3D Ensemble** | **2.0672 ± 0.1407** | **+26%** ⭐⭐ | Multi-conformer |
 
 ### **¹H NMR Chemical Shifts**
 
