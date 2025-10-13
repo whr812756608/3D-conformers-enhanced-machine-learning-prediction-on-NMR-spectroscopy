@@ -1,4 +1,4 @@
-# 1H_NMR_training.py - Â¹H NMR prediction training (follows C NMR workflow)
+# 1H_NMR_training.py - 1H NMR prediction training
 import os
 import numpy as np
 import torch
@@ -86,9 +86,8 @@ def train_epoch(model, loader, optimizer, device, lambda_reg=0.02, max_grad_norm
     n = max(1, len(loader))
     avg_loss = total_loss / n
     avg_pred_loss = total_pred_loss / n
-    avg_reg = (total_reg_loss / n) if total_reg_loss > 0 else 0.0
 
-    return avg_loss, avg_pred_loss, avg_reg
+    return avg_loss, avg_pred_loss
 
 
 @torch.no_grad()
@@ -126,7 +125,7 @@ def train_model(config_name, model, train_set, val_set, device,
     save_path = os.path.join(config.DIR_MODELS, f"{config_name}.pt")
 
     for epoch in range(1, epochs + 1):
-        train_loss, pred_loss, reg_loss = train_epoch(
+        train_loss, reg_loss = train_epoch(
             model, train_loader, optimizer, device, lambda_reg=lambda_reg
         )
 
@@ -199,6 +198,18 @@ def main():
     train_set = Subset(dataset, train_idx)
     val_set = Subset(dataset, val_idx)
 
+    print(f"TRAINING PLAN")
+    print(f"{'=' * 80}")
+    if config.IF_PRETRAIN:
+        print(f"  Mode: Using pretrained 3D initialization")
+        print(f"  Models to train: 2D baseline + 3D (pretrained)")
+        print(f"  Pretrained model: {config.PRETRAINED_PATH}")
+    else:
+        print(f"  Mode: Training from scratch")
+        print(f"  Models to train: 2D baseline + 3D (from scratch)")
+    print(f"  Seeds: {config.SEEDS}")
+    print(f"{'=' * 80}\n")
+
     for SEED in config.SEEDS:
         print(f"\n{'=' * 80}\n{'=' * 26} SEED {SEED} {'=' * 26}\n{'=' * 80}")
         # Per-seed determinism
@@ -211,35 +222,45 @@ def main():
         model_2d = build_2d().to(device)
         train_model(
             f"H_2D_baseline_seed{SEED}", model_2d, train_set, val_set, device,
-            epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR, weight_decay=config.WEIGHT_DECAY,
-            lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE)
-
-        # 3D single conformer (from scratch)
-        model_3d = build_3d().to(device)
-        train_model(
-            f"H_3D_single_seed{SEED}", model_3d, train_set, val_set, device,
-            epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR, weight_decay=config.WEIGHT_DECAY,
-            lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE,
+            epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR,
+            weight_decay=config.WEIGHT_DECAY,
+            lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE
         )
 
-        # 3D single conformer (pretrained init)
+        # ← CHANGED: 3D model - either pretrained or from scratch
         if config.IF_PRETRAIN:
-            model_3d_pt = build_3d().to(device)
-            ok = maybe_load_pretrained(model_3d_pt, config.PRETRAINED_PATH, device)
+            # Use pretrained initialization
+            model_3d = build_3d().to(device)
+            ok = maybe_load_pretrained(model_3d, config.PRETRAINED_PATH, device)
             if not ok:
-                print("Proceeding without pretrained (weights not loaded).")
+                print("Warning: Proceeding without pretrained weights.")
+
             train_model(
-                f"H_3D_single_pretrained_seed{SEED}", model_3d_pt,
+                f"H_3D_single_seed{SEED}", model_3d,  # ← CHANGED: Unified name
                 train_set, val_set, device,
-                epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR, weight_decay=config.WEIGHT_DECAY,
-                lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE,
+                epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR,
+                weight_decay=config.WEIGHT_DECAY,
+                lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE
+            )
+        else:
+            # Train from scratch
+            model_3d = build_3d().to(device)
+            train_model(
+                f"H_3D_single_seed{SEED}", model_3d,  # ← CHANGED: Same name
+                train_set, val_set, device,
+                epochs=config.EPOCHS, bs=config.BATCH_SIZE, lr=config.LR,
+                weight_decay=config.WEIGHT_DECAY,
+                lambda_reg=config.LAMBDA_REG, early_stop_patience=config.EARLY_PATIENCE
             )
 
     print("\n" + "=" * 80)
     print("All training runs complete!")
+    if config.IF_PRETRAIN:
+        print(f"Training mode: Pretrained initialization")
+    else:
+        print(f"Training mode: From scratch")
     print(f"Checkpoints saved in: {config.DIR_MODELS}")
     print("=" * 80)
-
 
 if __name__ == "__main__":
     main()
