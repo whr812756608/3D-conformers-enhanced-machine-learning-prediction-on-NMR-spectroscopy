@@ -28,7 +28,7 @@ This project investigates whether incorporating **3D conformational information*
 
 **Scientific Insight:** Carbon-13 shifts are highly sensitive to 3D geometry (electronic effects, steric environments), while proton shifts depend more on local topology. Our adaptive architecture learns when to use 3D vs 2D features for each atom type.
 
-#  3D-Enhanced NMR Chemical Shift Prediction Pipeline
+##  3D-Enhanced NMR Chemical Shift Prediction Pipeline
 
 A complete machine learning pipeline for predicting ¹³C and ¹H NMR chemical shifts using 3D molecular geometry with self-supervised pretraining and transfer learning.
 
