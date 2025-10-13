@@ -26,7 +26,7 @@ PRETRAINED_PATH = DIR_PRETRAIN / "3D_pretrained.pt"
 # EXPERIMENT SETTINGS
 # ============================================================
 # Seeds for reproducibility (used in both training and testing)
-SEEDS = [33, 66, 99]
+SEEDS = [10, 20, 30, 40, 50]
 
 # Pretrained: set to True to use pretrained 3D model initialization
 # NOTE: The same pretrained weights work for BOTH C and H NMR!
@@ -36,7 +36,7 @@ IF_PRETRAIN = True
 # PRETRAINING HYPERPARAMETERS
 # ============================================================
 # H NMR uses the same pretrained model as C NMR
-PRETRAIN_EPOCHS = 30
+PRETRAIN_EPOCHS = 35
 PRETRAIN_BATCH_SIZE = 32
 PRETRAIN_LR = 1e-3
 PRETRAIN_WEIGHT_DECAY = 1e-6
