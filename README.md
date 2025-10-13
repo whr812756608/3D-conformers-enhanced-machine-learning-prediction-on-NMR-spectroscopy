@@ -418,7 +418,7 @@ Loss = MSE(predicted_noise, actual_noise)
 | Model | MAE (ppm) | Improvement vs 2D | Notes |
 |-------|-----------|-------------------|-------|
 | 2D Baseline | 0.2653 ± 0.03 | — | Graph topology only |
-| **3D Pretrained** | **0.2588 ± 0.02** | ** +2.43%** ⭐ | Single Conformer  |
+| **3D Pretrained** | **0.2588 ± 0.02** | **+3%** ⭐ | Single Conformer  |
 | **3D Ensemble** | **0.2042 ± 0.02** | **+20%** ⭐⭐ | Multi-conformers |
 
 ### **Key Insights:**
