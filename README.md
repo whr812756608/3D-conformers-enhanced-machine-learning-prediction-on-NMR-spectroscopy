@@ -27,9 +27,9 @@ For TransPeakNet-only experiments, see the [original repository](https://github.
 
 ---
 
-##  This Project's Extension: Why 3D Conformers Matter
+##  This Project's Innovation: Why 3D Conformers Matter
 
-** We enhance TransPeakNet by:
+We enhance TransPeakNet by:
 1. Adding 3D conformer information from GEOM
 2. Implementing self-supervised pretraining on unlabeled structures
 3. Using Boltzmann-weighted conformer ensembles
