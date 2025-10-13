@@ -16,8 +16,6 @@ from urllib3.exceptions import NotOpenSSLWarning
 warnings.filterwarnings("ignore", category=NotOpenSSLWarning)
 
 import H_NMR_config as config
-
-# ---------------- Project imports ----------------
 from GEOM_models.Model_2D_3D_hybrid import NMR2DMPNN, NMR3DNet, evaluate
 
 # ---------------- Device selection ----------------
@@ -283,7 +281,7 @@ def print_atom_improvements(df_atoms, top_n=30):
 
 def safe_load_weights(model, ckpt_path, device):
     """Load weights safely."""
-    state = torch.load(str(ckpt_path), map_location="cpu")
+    state = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
 
     if isinstance(state, dict) and 'model_state_dict' in state:
         model.load_state_dict(state['model_state_dict'], strict=False)
@@ -302,9 +300,12 @@ def main():
     print(f"Repo root: {config.REPO_ROOT}")
 
     print(f"\n{'=' * 60}")
-    print(f"¹H NMR TESTING CONFIGURATION")
+    print(f"1H NMR TESTING CONFIGURATION")
     print(f"{'=' * 60}")
-    print(f"  Pretrained models: {'ENABLED' if config.IF_PRETRAIN else 'DISABLED'}")
+    if config.IF_PRETRAIN:
+        print(f"  Mode: Testing pretrained 3D models")
+    else:
+        print(f"  Mode: Testing from-scratch 3D models")
     print(f"  Seeds: {config.SEEDS}")
     print(f"{'=' * 60}\n")
 
@@ -326,26 +327,17 @@ def main():
     print(f"Test size: {len(test_set)}")
 
     # Aggregation structure
-    if config.IF_PRETRAIN:
-        agg = {
-            "2D": [],
-            "3D_single": [],
-            "3D_pretrained_single": [],
-            "3D_pretrained_ensemble": []
-        }
-    else:
-        agg = {
-            "2D": [],
-            "3D_single": [],
-            "3D_ensemble": []
-        }
+    agg = {
+        "2D": [],
+        "3D_single": [],
+        "3D_ensemble": []
+    }
 
     for SEED in config.SEEDS:
         print(f"\n{'=' * 80}\nSEED {SEED} – loading checkpoints and evaluating (1H NMR)\n{'=' * 80}")
 
         path_2d = config.DIR_MODELS / f"H_2D_baseline_seed{SEED}.pt"
         path_3d = config.DIR_MODELS / f"H_3D_single_seed{SEED}.pt"
-        path_3d_pt = config.DIR_MODELS / f"H_3D_single_pretrained_seed{SEED}.pt"
 
         seed_results = {}
 
@@ -364,7 +356,7 @@ def main():
             agg["2D"].append(mae_2d)
             seed_results["2D baseline"] = mae_2d
 
-        # ========== 3D SINGLE (from scratch) ==========
+        # ========== 3D SINGLE  ==========
         if not path_3d.exists():
             print(f"Warning: Missing 3D(single) checkpoint: {path_3d}")
             mae_3d_single = np.nan
@@ -374,45 +366,21 @@ def main():
             m3d = safe_load_weights(m3d, path_3d, device)
             p3d, t3d = evaluate(m3d, test_loader, device)
             mae_3d_single = mean_absolute_error(t3d, p3d)
-            print(f"[Seed {SEED}] 3D(single) Test MAE: {mae_3d_single:.4f} ppm")
+            print(f"[Seed {SEED}] 3D single MAE: {mae_3d_single:.4f} ppm")
             agg["3D_single"].append(mae_3d_single)
             seed_results["3D single"] = mae_3d_single
 
-        # ========== PRETRAINED PATH ==========
-        if config.IF_PRETRAIN:
-            if not path_3d_pt.exists():
-                print(f"Warning: Missing 3D(pretrained) checkpoint: {path_3d_pt}")
-                mae_3d_pt_single = np.nan
-                m3d_pt = None
-            else:
-                m3d_pt = build_3d_on(torch.device("cpu"))
-                m3d_pt = safe_load_weights(m3d_pt, path_3d_pt, device)
-                p3d_pt, t3d_pt = evaluate(m3d_pt, test_loader, device)
-                mae_3d_pt_single = mean_absolute_error(t3d_pt, p3d_pt)
-                print(f"[Seed {SEED}] 3D(pretrained single) Test MAE: {mae_3d_pt_single:.4f} ppm")
-                agg["3D_pretrained_single"].append(mae_3d_pt_single)
-                seed_results["3D pretrained (single)"] = mae_3d_pt_single
-
-            # 3D pretrained ensemble
-            if (m2d is not None) and (m3d_pt is not None) and config.CONF_DIR.exists():
-                g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
-                    m2d, m3d_pt, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS,
-                )
-                print(f"[Seed {SEED}] 3D Pretrained Ensemble MAE: {ge:.4f} ppm")
-                agg["3D_pretrained_ensemble"].append(ge)
-                seed_results["3D pretrained (ensemble)"] = ge
-                print_atom_improvements(df_atoms, top_n=config.TOP_N_ATOMS)
-
-        # NON-PRETRAINED ENSEMBLE
+        # ========== 3D ENSEMBLE ==========  ← CHANGED: Unified path
+        if (m2d is not None) and (m3d is not None) and config.CONF_DIR.exists():
+            g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
+                m2d, m3d, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
+            )
+            print(f"[Seed {SEED}] 3D ensemble MAE: {ge:.4f} ppm")  # ← CHANGED: label
+            agg["3D_ensemble"].append(ge)
+            seed_results["3D ensemble"] = ge
+            print_atom_improvements(df_atoms, top_n=config.TOP_N_ATOMS)
         else:
-            if (m2d is not None) and (m3d is not None) and config.CONF_DIR.exists():
-                g2, g3s, ge, df_atoms, df_mols = evaluate_ensemble_with_atoms(
-                    m2d, m3d_pt, test_set, config.CONF_DIR, device, top_n=config.TOP_N_ATOMS
-                )
-                print(f"[Seed {SEED}] 3D Ensemble MAE: {ge:.4f} ppm")
-                agg["3D_ensemble"].append(ge)
-                seed_results["3D ensemble"] = ge
-                print_atom_improvements(df_atoms, top_n=config.TOP_N_ATOMS)
+            print("(Info) Ensemble skipped for this seed (missing models or conformers).")
 
         # PER-SEED SUMMARY
         print(f"\n{'=' * 80}")
@@ -450,19 +418,11 @@ def main():
 
     baseline_mean, _, baseline_n = m_s(agg["2D"])
 
-    if config.IF_PRETRAIN:
-        comparisons = [
-            ("2D", "2D baseline"),
-            ("3D_single", "3D single (from scratch)"),
-            ("3D_pretrained_single", "3D pretrained (single)"),
-            ("3D_pretrained_ensemble", "3D pretrained (ensemble)")
-        ]
-    else:
-        comparisons = [
-            ("2D", "2D baseline"),
-            ("3D_single", "3D single"),
-            ("3D_ensemble", "3D ensemble")
-        ]
+    comparisons = [
+        ("2D", "2D baseline"),
+        ("3D_single", "3D single"),
+        ("3D_ensemble", "3D ensemble")
+    ]
 
     print(f"{'Model':<35} {'MAE (ppm)':>20} {'vs 2D baseline':>18}")
     print("-" * 80)
@@ -484,8 +444,6 @@ def main():
             print(f"{label:<35} {mae_str:>20} {improvement_str:>18}")
         else:
             print(f"{label:<35} {'(no runs)':>20} {'N/A':>18}")
-
-
 
 if __name__ == "__main__":
     main()
