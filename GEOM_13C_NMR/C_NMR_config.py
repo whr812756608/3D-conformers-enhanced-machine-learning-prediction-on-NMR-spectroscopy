@@ -28,7 +28,7 @@ PRETRAINED_PATH = DIR_PRETRAIN / "3D_pretrained.pt"
 # EXPERIMENT SETTINGS
 # ============================================================
 # Seeds for reproducibility
-SEEDS = [33, 66, 99, 132, 165]
+SEEDS =[10, 20, 30, 40, 50]
 
 # Pretrained: set to True to use pretrained 3D model initialization
 IF_PRETRAIN = True
@@ -59,10 +59,10 @@ PRETRAIN_FREEZE_2D = True
 # ============================================================
 # TRAINING HYPERPARAMETERS (Fine-tuning)
 # ============================================================
-EPOCHS = 120
+EPOCHS = 100
 BATCH_SIZE = 32
 
-# Learning rate (optimized for raw ppm values)
+# Learning rate
 LR = 5e-4
 WEIGHT_DECAY = 1e-6
 EARLY_PATIENCE = 20
