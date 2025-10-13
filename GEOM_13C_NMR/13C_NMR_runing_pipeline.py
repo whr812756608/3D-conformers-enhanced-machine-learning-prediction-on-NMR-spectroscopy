@@ -221,18 +221,6 @@ class PipelineRunner:
 
         print(f"\nTotal Pipeline Time: {total_elapsed:.2f} seconds ({total_elapsed / 60:.2f} minutes)")
         print(f"\nStage Results:")
-
-        for stage, result in self.results.items():
-            if result is not None:
-                status_symbol = {
-                    'success': '✓',
-                    'failed': '✗',
-                    'skipped': '○',
-                    'existing': '○'
-                }.get(result, '?')
-                status_text = result.upper()
-                print(f"  {status_symbol} {stage.capitalize():<12}: {status_text}")
-
         print(f"\nConfiguration Used:")
         print(f"  Seeds: {config.SEEDS}")
         print(f"  Pretrained: {'ON' if config.IF_PRETRAIN else 'OFF'}")
