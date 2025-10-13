@@ -418,18 +418,14 @@ Loss = MSE(predicted_noise, actual_noise)
 | Model | MAE (ppm) | Improvement vs 2D | Notes |
 |-------|-----------|-------------------|-------|
 | 2D Baseline | 0.2653 ± 0.03 | — | Graph topology only |
-| **3D Pretrained** | **0.2588 ± 0.02** | ** +2.43%%** ⭐ | Single Conformer  |
+| **3D Pretrained** | **0.2588 ± 0.02** | ** +2.43%** ⭐ | Single Conformer  |
 | **3D Ensemble** | **0.2042 ± 0.02** | **+20%** ⭐⭐ | Multi-conformers |
 
 ### **Key Insights:**
 
- **3D geometry matters:** Consistent 10-15% improvement over 2D baseline
+ **3D geometry matters:** Consistent 5% improvement over 2D baseline for 13C NMR prediction and marignial imrovement for H NMR prediction
 
- **Transfer learning works:** Pretrained models outperform random initialization by 8-10%
-
- **Conformer ensembles help:** Boltzmann weighting adds another 5-8% improvement
-
- **Universal features:** Same pretrained model works for both ¹³C and ¹H!
+ **Conformer ensembles help:** Boltzmann weighting adds another 10-20% improvement
 
 ---
 
