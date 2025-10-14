@@ -398,7 +398,7 @@ Loss = MSE(predicted_noise, actual_noise)
 | Approach | Data Needed | Performance | Cost |
 |----------|-------------|-------------|------|
 | **From Scratch** | Labeled NMR | Baseline | Expensive data |
-| **Self-Supervised** | Unlabeled conformers | +15-25% improvement | Cheap data |
+| **Self-Supervised** | Unlabeled conformers | +5% improvement | Cheap data |
 | **Combined (Ours)** | Both | Best! | Optimal |
 
 ---
