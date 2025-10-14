@@ -428,6 +428,54 @@ Loss = MSE(predicted_noise, actual_noise)
  **Conformer ensembles help:** Boltzmann weighting adds another 10-20% improvement
 
 ---
+## Atom-Level Analysis: Where 3D Information Matters Most
+
+### Top 30 Most Improved 13C Predictions
+
+The following table shows atoms where 3D conformer ensembles provided the largest accuracy improvements over the 2D baseline model. Each entry represents a specific carbon atom in a molecule, with improvements measured in ppm (parts per million).
+
+| Rank | SMILES | Atom | Hyb | True | 2D Pred | 3D Ens | Improv | 3D Err |
+|------|--------|------|-----|------|---------|--------|--------|--------|
+| 1 | `Cc1ccc(=O)oc1` | C[3] | SP2 | 114.70 | 128.24 | 115.59 | +12.65 | 0.90 |
+| 2 | `N#CC1C=CC=CC=C1` | C[1] | SP2 | 116.00 | 133.27 | 122.18 | +11.08 | 6.19 |
+| 3 | `Cc1cccnc1C#N` | C[5] | SP2 | 138.10 | 130.05 | 138.35 | +7.81 | 0.25 |
+| 4 | `CC#CCc1cc2ccccc2c(=O)o1` | C[11] | SP2 | 71.80 | 81.41 | 73.21 | +8.20 | 1.41 |
+| 5 | `CCCOC(=O)c1cc(O)c(O)c(O)c1` | C[4] | SP3 | 120.10 | 127.61 | 119.97 | +7.38 | 0.13 |
+| 6 | `N#CC1C=CC=CC=C1` | C[6] | SP2 | 116.00 | 133.27 | 122.89 | +10.38 | 6.89 |
+| 7 | `Cc1ccc(N)c(O)c1` | C[1] | SP2 | 125.10 | 133.00 | 125.85 | +7.14 | 0.75 |
+| 8 | `C1CN(c2nc(N3CCOCC3)nc(N3CCOCC3)n2)CCO1` | C[1] | SP3 | 165.20 | 158.31 | 165.00 | +6.68 | 0.20 |
+| 9 | `O=C1/C(=C2\Nc3ccccc3C2=O)Nc2ccccc21` | C[4] | SP2 | 152.60 | 146.07 | 152.51 | +6.44 | 0.10 |
+| 10 | `C1CN(c2nc(N3CCOCC3)nc(N3CCOCC3)n2)CCO1` | C[0] | SP3 | 165.20 | 158.31 | 164.69 | +6.38 | 0.51 |
+| 11 | `COc1cccc(O)c1O` | C[6] | SP2 | 119.94 | 127.16 | 120.67 | +6.49 | 0.73 |
+| 12 | `CC(=O)Nc1ccccc1O` | C[1] | SP2 | 119.00 | 125.55 | 118.64 | +6.19 | 0.36 |
+| 13 | `c1ccc(-c2cccc(-c3ccccc3)n2)cc1` | C[0] | UNK | 156.63 | 162.50 | 156.47 | +5.72 | 0.16 |
+| 14 | `CC1(C)NC=CC1=O` | C[1] | SP3 | 206.70 | 200.21 | 206.04 | +5.83 | 0.66 |
+| 15 | `O=C1/C(=C2\Nc3ccccc3C2=O)Nc2ccccc21` | C[8] | SP2 | 120.70 | 128.05 | 122.05 | +6.00 | 1.35 |
+| 16 | `C=CC(=C)C` | C[0] | SP2 | 113.60 | 120.22 | 112.68 | +5.70 | 0.92 |
+| 17 | `O=C(O)C=C(Br)Br` | C[0] | SP2 | 104.40 | 126.28 | 115.50 | +10.78 | 11.10 |
+| 18 | `Cc1cccc(C(=O)O)c1O` | C[2] | SP2 | 136.10 | 129.95 | 135.42 | +5.48 | 0.68 |
+| 19 | `Cn1c(=O)c2c(ncn2C)n(C)c1=O` | C[3] | SP2 | 107.36 | 125.90 | 116.31 | +9.59 | 8.96 |
+| 20 | `CC1(C)CC(=NO)CC(C)(C)N1` | C[4] | UNK | 157.13 | 165.43 | 159.28 | +6.15 | 2.15 |
+| 21 | `Cn1cnnc1` | C[0] | SP3 | 144.10 | 139.02 | 144.24 | +4.95 | 0.14 |
+| 22 | `COc1cc(C(C)=O)cc(OC)c1O` | C[2] | SP3 | 139.80 | 134.96 | 139.71 | +4.75 | 0.09 |
+| 23 | `Cn1cnnc1` | C[1] | SP2 | 144.10 | 139.02 | 144.37 | +4.81 | 0.27 |
+| 24 | `CN1CC=CC1=O` | C[0] | SP3 | 174.50 | 168.95 | 173.91 | +4.96 | 0.59 |
+| 25 | `O=C1/C(=C2\Nc3ccccc3C2=O)Nc2ccccc21` | C[3] | SP2 | 135.70 | 130.58 | 136.03 | +4.79 | 0.33 |
+| 26 | `COP(=S)(OC)Oc1ccc(SC)c(C)c1` | C[1] | UNK | 148.10 | 157.74 | 151.45 | +6.29 | 3.35 |
+| 27 | `C#CC1=C(C)COC1=O` | C[0] | SP | 170.90 | 166.46 | 170.89 | +4.43 | 0.01 |
+| 28 | `CC(=O)n1cncn1` | C[2] | SP2 | 167.80 | 172.62 | 167.54 | +4.56 | 0.26 |
+| 29 | `O=C1/C(=C2\Nc3ccccc3C2=O)Nc2ccccc21` | C[15] | SP2 | 135.70 | 130.58 | 135.22 | +4.64 | 0.48 |
+| 30 | `Cc1cc(C)nc(NS(=O)(=O)c2ccc(N)cc2)n1` | C[0] | SP3 | 127.61 | 134.32 | 126.07 | +5.16 | 1.55 |
+
+**Column Definitions:**
+- **Atom**: Carbon atom index in SMILES string
+- **Hyb**: Hybridization state (SP, SP2, SP3, UNK=unknown/special)
+- **True**: Experimental ¹³C chemical shift (ppm)
+- **2D Pred**: Prediction from 2D baseline model
+- **3D Ens**: Prediction from 3D ensemble model
+- **Improv**: Improvement in MAE (ppm) = |2D Error| - |3D Error|
+- **3D Err**: Final absolute error with 3D ensemble
+
 
 ## Key Design Decisions
 
