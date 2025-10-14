@@ -368,7 +368,7 @@ SEEDS = [10, 20, 30, 40, 50]
 
 ## Self-Supervised Pretraining Tasks
 
-### **Task 1: Distance Prediction** 🎯
+### **Task 1: Distance Prediction** 
 
 **Objective:** Predict inter-atomic distances from node features
 ```python
@@ -476,6 +476,47 @@ The following table shows atoms where 3D conformer ensembles provided the larges
 - **Improv**: Improvement in MAE (ppm) = |2D Error| - |3D Error|
 - **3D Err**: Final absolute error with 3D ensemble
 
+
+### Key Insights
+
+#### 1. **Heteroaromatic Systems Benefit Most**
+
+**Example:** Rank #1 (`Cc1ccc(=O)oc1` - lactone)
+- 2D model: 128.24 ppm (13.54 ppm error)
+- 3D ensemble: 115.59 ppm (0.89 ppm error)
+- **Improvement: 12.65 ppm**
+
+**Why:** The oxygen atoms in the lactone ring create complex through-space electronic shielding effects that depend strongly on ring geometry and torsional angles. The 2D model only sees connectivity, missing the spatial arrangement of lone pairs.
+
+#### 2. **Cyano Groups Create Large 3D Dependencies**
+
+**Examples:** 
+- Rank #2: Benzonitrile (`N#CC1C=CC=CC=C1`) - 11.08 ppm improvement
+- Rank #3: Cyanopyridine (`Cc1cccnc1C#N`) - 7.81 ppm improvement
+
+**Why:** The linear C≡N group has strong electron-withdrawing effects that propagate through the aromatic system. The exact angle and distance to neighboring atoms dramatically affects shielding, requiring 3D geometry.
+
+#### 3. **Conjugated Bicyclic Systems Show Consistent Gains**
+
+**Example:** Rank #9 (Indigo derivative `O=C1/C(=C2\Nc3ccccc3C2=O)Nc2ccccc21`)
+- Multiple atoms improved by 4-6 ppm
+- **Why:** The planar conjugated system has delocalized π-electrons where small torsional changes affect all atoms
+
+#### 4. **Flexible SP3 Carbons Adjacent to Heteroatoms**
+
+**Example:** Rank #5 (`CCCOC(=O)c1cc(O)c(O)c(O)c1`)
+- SP3 carbon with 7.38 ppm improvement
+- **Why:** The ester linkage allows rotation, and the exact 3D orientation relative to the aromatic ring and hydroxyl groups affects shielding
+
+#### 5. **Smallest Errors After 3D Correction**
+
+**Best Final Accuracy (3D Err < 0.3 ppm):**
+- Rank #3: Cyanopyridine - 0.25 ppm final error
+- Rank #9: Indigo derivative - 0.10 ppm final error
+- Rank #22: Methoxy acetophenone - 0.09 ppm final error
+- Rank #27: Alkyne lactone - 0.01 ppm final error ⭐
+
+These near-perfect predictions demonstrate that when the model correctly identifies geometry-dependent atoms, 3D information enables exceptional accuracy.
 
 ## Key Design Decisions
 
